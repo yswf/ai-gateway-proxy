@@ -1,0 +1,117 @@
+# =============================================================
+#  AI Gateway Proxy — Development Docker Compose
+#  用法: docker compose -f docker-compose.dev.yml up --build
+#
+#  特性:
+#  - 后端热重载 (uvicorn --reload), 修改 Python 文件即时生效
+#  - 前端热重载 (vite dev server), 修改 Vue/TS 文件即时生效
+#  - npm/pip 依赖全部在容器内, 无需本地安装任何语言环境
+#  - postgres / redis 数据持久化到 named volumes
+# =============================================================
+version: '3.9'
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: ai_gateway_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_gateway
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"          # 暴露给宿主机, 方便用 DBeaver/pgAdmin 连接
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - ai_dev_net
+
+  # ── Redis ───────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ai_gateway_redis_dev
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_dev_data:/data
+    ports:
+      - "6379:6379"          # 暴露给宿主机, 方便用 Redis Insight 连接
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - ai_dev_net
+
+  # ── Backend (FastAPI + uvicorn --reload) ────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev     # 专用 dev 镜像 (含 watchfiles)
+    container_name: ai_gateway_backend_dev
+    restart: unless-stopped
+    env_file:
+      - .env                         # 读取 .env 文件中的配置
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/ai_gateway
+      REDIS_URL: redis://redis:6379/0
+      DEBUG: "true"
+    volumes:
+      - ./backend:/app               # 🔥 挂载源码 → 修改 Python 文件即时热重载
+    ports:
+      - "8000:8000"                  # FastAPI + Swagger UI
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ai_dev_net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── Frontend (Vite Dev Server) ──────────────────────────────
+  frontend:
+    image: node:20-alpine
+    container_name: ai_gateway_frontend_dev
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./frontend:/app              # 🔥 挂载源码 → 修改 Vue/TS 文件即时热重载
+      - frontend_dev_modules:/app/node_modules  # 依赖隔离, 不污染宿主机
+    environment:
+      # 让 Vite 监听所有网卡 (容器内必须)
+      HOST: 0.0.0.0
+    command: >
+      sh -c "
+        echo '📦 Installing npm dependencies...' &&
+        npm install --registry https://registry.npmmirror.com &&
+        echo '🚀 Starting Vite dev server...' &&
+        npm run dev -- --host 0.0.0.0
+      "
+    ports:
+      - "3000:3000"                  # 前端开发服务器
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - ai_dev_net
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  frontend_dev_modules:             # node_modules 持久化, 避免每次重启重装
+
+networks:
+  ai_dev_net:
+    driver: bridge
