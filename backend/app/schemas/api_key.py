@@ -1,6 +1,6 @@
 import uuid
-from datetime import datetime
-from pydantic import BaseModel
+from datetime import datetime, timezone
+from pydantic import BaseModel, field_validator
 from typing import Optional
 
 
@@ -11,6 +11,13 @@ class APIKeyCreate(BaseModel):
     expires_at: Optional[datetime] = None
     allowed_models: list[str] = []
 
+    @field_validator("expires_at")
+    @classmethod
+    def make_naive_utc(cls, v: Optional[datetime]) -> Optional[datetime]:
+        if v is not None and v.tzinfo is not None:
+            return v.astimezone(timezone.utc).replace(tzinfo=None)
+        return v
+
 
 class APIKeyUpdate(BaseModel):
     name: Optional[str] = None
@@ -20,6 +27,13 @@ class APIKeyUpdate(BaseModel):
     expires_at: Optional[datetime] = None
     allowed_models: Optional[list[str]] = None
 
+    @field_validator("expires_at")
+    @classmethod
+    def make_naive_utc(cls, v: Optional[datetime]) -> Optional[datetime]:
+        if v is not None and v.tzinfo is not None:
+            return v.astimezone(timezone.utc).replace(tzinfo=None)
+        return v
+
 
 class APIKeyResponse(BaseModel):
     id: uuid.UUID
@@ -27,6 +41,7 @@ class APIKeyResponse(BaseModel):
     provider_id: Optional[uuid.UUID] = None
     key_prefix: str
     name: str
+    plaintext_key: Optional[str] = None
     status: str
     rate_limit_rpm: int
     token_limit_daily: int

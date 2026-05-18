@@ -140,7 +140,7 @@ function latencyClass(ms: number | null) {
   return 'latency-slow'
 }
 
-const chartColors = ['#6366f1', '#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6']
+const chartColors = ['#9ab856', '#0d759f', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 
 const trendOption = computed(() => ({
   backgroundColor: 'transparent',
@@ -161,7 +161,7 @@ const trendOption = computed(() => ({
   series: [{
     type: 'bar',
     data: daily.value.map(d => d.total_tokens),
-    itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#6366f1' }, { offset: 1, color: '#4f46e5' }] }, borderRadius: [4, 4, 0, 0] },
+    itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#9ab856' }, { offset: 1, color: '#7c9b3d' }] }, borderRadius: [4, 4, 0, 0] },
   }],
 }))
 

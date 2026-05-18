@@ -41,6 +41,28 @@ async def list_enabled_providers(
     return ProviderPublicListResponse(total=total, items=providers)
 
 
+@router.get("/models", response_model=ModelListResponse)
+async def list_all_enabled_models(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    skip: int = Query(0, ge=0),
+    limit: int = Query(1000, ge=1, le=2000),
+):
+    """Return all enabled models (for dropdown population in the UI)."""
+    total = (
+        await db.execute(select(func.count()).select_from(Model).where(Model.is_enabled == True))
+    ).scalar()
+    res = await db.execute(
+        select(Model)
+        .where(Model.is_enabled == True)
+        .order_by(Model.sort_order.asc(), Model.name.asc())
+        .offset(skip).limit(limit)
+    )
+    models = res.scalars().all()
+    return ModelListResponse(total=total, items=models)
+
+
+
 @router.get("/providers/{provider_id}/models", response_model=ModelListResponse)
 async def list_models_for_provider(
     provider_id: uuid.UUID,

@@ -127,6 +127,24 @@
         <template v-if="currentApp.status === 'pending'">
           <el-divider />
           <el-form label-position="top">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px;">
+              <el-form-item label="速率限制 (RPM)">
+                <el-input-number v-model="rateLimit" :min="0" style="width: 100%" />
+                <div style="font-size: 11px; color: var(--color-text-secondary); margin-top: 4px;">每分钟最大请求数，0表示无限制</div>
+              </el-form-item>
+              <el-form-item label="日 Token 限额">
+                <el-input-number v-model="tokenLimit" :min="0" style="width: 100%" />
+                <div style="font-size: 11px; color: var(--color-text-secondary); margin-top: 4px;">每日最大Token限额，0表示无限制</div>
+              </el-form-item>
+            </div>
+            <el-form-item label="到期时间">
+              <el-date-picker
+                v-model="expiresAt"
+                type="datetime"
+                placeholder="留空则永久有效"
+                style="width: 100%"
+              />
+            </el-form-item>
             <el-form-item label="管理员回复 (可选)">
               <el-input
                 v-model="reviewNote"
@@ -184,6 +202,10 @@ const currentApp = ref<KeyApplication | null>(null)
 const reviewNote = ref('')
 const processing = ref(false)
 
+const rateLimit = ref(60)
+const tokenLimit = ref(0)
+const expiresAt = ref<any>(null)
+
 async function fetchApplications() {
   loading.value = true
   try {
@@ -201,6 +223,9 @@ async function fetchApplications() {
 function openReview(app: KeyApplication) {
   currentApp.value = app
   reviewNote.value = ''
+  rateLimit.value = 60
+  tokenLimit.value = 0
+  expiresAt.value = null
   showReviewDialog.value = true
 }
 
@@ -211,6 +236,9 @@ async function submitReview(status: 'approved' | 'rejected') {
     await adminApi.reviewApplication(currentApp.value.id, {
       status,
       admin_note: reviewNote.value || undefined,
+      rate_limit_rpm: status === 'approved' ? rateLimit.value : undefined,
+      token_limit_daily: status === 'approved' ? tokenLimit.value : undefined,
+      expires_at: (status === 'approved' && expiresAt.value) ? expiresAt.value.toISOString() : undefined,
     })
     ElMessage.success(status === 'approved' ? '申请已批准，API Key 已生成' : '申请已拒绝')
     showReviewDialog.value = false

@@ -26,6 +26,9 @@ async def run_dev_migrations():
             "ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS provider_id UUID REFERENCES providers(id) ON DELETE SET NULL;"
         ))
         await conn.execute(text(
+            "ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS plaintext_key VARCHAR(100);"
+        ))
+        await conn.execute(text(
             "ALTER TABLE models DROP CONSTRAINT IF EXISTS models_name_key;"
         ))
         await conn.execute(text(

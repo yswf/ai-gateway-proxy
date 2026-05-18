@@ -77,7 +77,7 @@
                 <span class="user-name">{{ displayName }}</span>
                 <el-tag size="small" :type="roleTagType" effect="plain">{{ roleLabel }}</el-tag>
               </div>
-              <el-icon size="14" color="#94a3b8"><ArrowDown /></el-icon>
+              <el-icon size="14" color="rgba(255, 255, 255, 0.85)"><ArrowDown /></el-icon>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
@@ -189,8 +189,8 @@ async function handleCommand(command: string) {
 .sidebar {
   width: var(--sidebar-width);
   min-height: 100vh;
-  background: #fff;
-  border-right: 1px solid var(--color-border);
+  background: #203033;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -212,7 +212,7 @@ async function handleCommand(command: string) {
   gap: 10px;
   padding: 0 14px;
   height: var(--header-height);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
 }
 
@@ -226,7 +226,7 @@ async function handleCommand(command: string) {
   justify-content: center;
   color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(154, 184, 86, 0.3);
 }
 
 .logo-text {
@@ -255,7 +255,7 @@ async function handleCommand(command: string) {
   display: block;
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.38);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 8px 10px 4px;
@@ -268,7 +268,7 @@ async function handleCommand(command: string) {
   gap: 10px;
   padding: 9px 10px;
   border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.65);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -282,18 +282,18 @@ async function handleCommand(command: string) {
 }
 
 .nav-item:hover {
-  background: var(--color-bg-subtle);
-  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
 }
 
 .nav-item.active {
-  background: var(--color-primary-bg);
-  color: var(--color-primary-dark);
+  background: rgba(154, 184, 86, 0.15);
+  color: #9ab856;
   font-weight: 600;
 }
 
 .nav-item.active .el-icon {
-  color: var(--color-primary);
+  color: #9ab856;
 }
 
 .nav-label {
@@ -304,7 +304,7 @@ async function handleCommand(command: string) {
 /* ── Sidebar Footer ────────────────────────────────────────── */
 .sidebar-footer {
   padding: 8px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .collapse-btn {
@@ -338,8 +338,8 @@ async function handleCommand(command: string) {
 /* ── Header ────────────────────────────────────────────────── */
 .app-header {
   height: var(--header-height);
-  background: #fff;
-  border-bottom: 1px solid var(--color-border);
+  background: #0d759f;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -347,7 +347,7 @@ async function handleCommand(command: string) {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 12px rgba(13, 117, 159, 0.15);
   gap: 16px;
 }
 
@@ -365,18 +365,18 @@ async function handleCommand(command: string) {
   cursor: pointer;
   padding: 6px;
   border-radius: 8px;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.95);
   flex-shrink: 0;
 }
 
 .mobile-menu-btn:hover {
-  background: var(--color-bg-subtle);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .header-title {
   font-size: 17px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -400,7 +400,7 @@ async function handleCommand(command: string) {
 }
 
 .user-btn:hover {
-  background: var(--color-bg-subtle);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .user-avatar {
@@ -426,7 +426,7 @@ async function handleCommand(command: string) {
 .user-name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: #ffffff;
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;

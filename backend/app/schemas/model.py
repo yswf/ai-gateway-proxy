@@ -12,6 +12,7 @@ class ModelCreate(BaseModel):
     max_tokens: Optional[int] = None
     context_window: Optional[int] = None
     sort_order: int = 0
+    provider_id: Optional[uuid.UUID] = None
 
 
 class ModelUpdate(BaseModel):
@@ -21,6 +22,7 @@ class ModelUpdate(BaseModel):
     max_tokens: Optional[int] = None
     context_window: Optional[int] = None
     sort_order: Optional[int] = None
+    provider_id: Optional[uuid.UUID] = None
 
 
 class ModelResponse(BaseModel):
@@ -34,6 +36,7 @@ class ModelResponse(BaseModel):
     sort_order: int
     created_at: datetime
     updated_at: datetime
+    provider_id: Optional[uuid.UUID] = None
 
     model_config = {"from_attributes": True}
 

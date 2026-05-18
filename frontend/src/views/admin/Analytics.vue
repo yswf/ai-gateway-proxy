@@ -114,7 +114,7 @@ import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/compon
 import VChart from 'vue-echarts'
 import { UserFilled, Key, Coin, TrendCharts } from '@element-plus/icons-vue'
 import { adminApi } from '@/api/admin'
-import type { AdminStatsSummary, DailyUsage, ModelUsage, KeyUsageSummary } from '@/types'
+import type { AdminStatsSummary, DailyUsage, ModelUsage, KeyUsageSummary, UserTokenRankingItem } from '@/types'
 
 use([CanvasRenderer, LineChart, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
 
@@ -126,7 +126,7 @@ const models = ref<ModelUsage[]>([])
 const topKeys = ref<KeyUsageSummary[]>([])
 const topUsers = ref<UserTokenRankingItem[]>([])
 
-const chartColors = ['#6366f1', '#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6']
+const chartColors = ['#9ab856', '#0d759f', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 
 function formatNum(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
@@ -138,7 +138,7 @@ const maxTokens = computed(() => topKeys.value[0]?.total_tokens ?? 0)
 const maxUserTokens = computed(() => topUsers.value[0]?.total_tokens ?? 0)
 
 const summaryCards = computed(() => [
-  { label: '注册用户', value: summary.value?.total_users ?? 0, icon: UserFilled, gradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)' },
+  { label: '注册用户', value: summary.value?.total_users ?? 0, icon: UserFilled, gradient: 'linear-gradient(135deg, #9ab856, #7c9b3d)' },
   { label: '活跃 Keys', value: summary.value?.active_keys ?? 0, icon: Key, gradient: 'linear-gradient(135deg, #10b981, #059669)' },
   { label: '今日 Tokens', value: formatNum(summary.value?.today_tokens ?? 0), icon: Coin, gradient: 'linear-gradient(135deg, #f59e0b, #d97706)' },
   { label: '累计请求', value: formatNum(summary.value?.total_requests_all_time ?? 0), icon: TrendCharts, gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)' },
@@ -153,8 +153,8 @@ const trendOption = computed(() => ({
   series: [
     {
       name: '总 Tokens', type: 'line', data: daily.value.map(d => d.total_tokens), smooth: true,
-      lineStyle: { color: '#6366f1', width: 2 }, itemStyle: { color: '#6366f1' },
-      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(99,102,241,0.3)' }, { offset: 1, color: 'rgba(99,102,241,0)' }] } },
+      lineStyle: { color: '#9ab856', width: 2 }, itemStyle: { color: '#9ab856' },
+      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(154, 184, 86, 0.3)' }, { offset: 1, color: 'rgba(154, 184, 86, 0)' }] } },
     },
   ],
 }))

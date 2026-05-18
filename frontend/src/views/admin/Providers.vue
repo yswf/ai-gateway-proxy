@@ -43,14 +43,13 @@
               :model-value="row.is_enabled"
               :loading="togglingId === row.id"
               @change="(val: boolean) => toggleProvider(row, val)"
-              active-color="#6366f1"
+              active-color="#9ab856"
             />
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="success" size="small" :icon="RefreshRight" @click="syncModels(row)">同步模型</el-button>
             <el-button type="primary" size="small" @click="openEdit(row)">编辑</el-button>
             <el-button type="danger" size="small" @click="deleteProvider(row)">删除</el-button>
           </template>
@@ -86,7 +85,7 @@
           <el-input-number v-model="form.sort_order" :min="0" style="width: 100%" />
         </el-form-item>
         <el-form-item label="是否启用">
-          <el-switch v-model="form.is_enabled" active-color="#6366f1" />
+          <el-switch v-model="form.is_enabled" active-color="#9ab856" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -96,46 +95,16 @@
         </el-button>
       </template>
     </el-dialog>
-
-    <!-- Sync Models Dialog -->
-    <el-dialog v-model="showSyncDialog" title="从源同步模型" width="600px">
-      <div v-if="syncLoading" style="text-align: center; padding: 30px">
-        <el-icon class="is-loading" :size="30" color="#6366f1"><Loading /></el-icon>
-        <p style="margin-top: 10px; color: var(--color-text-secondary)">正在请求数据源...</p>
-      </div>
-      <div v-else-if="syncModelsList.length === 0" style="text-align: center; padding: 30px">
-        未获取到模型数据。
-      </div>
-      <div v-else>
-        <p style="margin-bottom: 12px; color: var(--color-text-secondary)">
-          共获取到 {{ syncModelsList.length }} 个模型。勾选以导入到当前系统的模型列表中。
-        </p>
-        <el-table
-          :data="syncModelsList"
-          height="350px"
-          @selection-change="handleSyncSelection"
-        >
-          <el-table-column type="selection" width="55" />
-          <el-table-column property="id" label="模型 ID" />
-        </el-table>
-      </div>
-      <template #footer>
-        <el-button @click="showSyncDialog = false">取消</el-button>
-        <el-button type="primary" :loading="importing" :disabled="!syncSelected.length" @click="importSelectedModels">
-          导入选中模型 ({{ syncSelected.length }})
-        </el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, RefreshRight, Loading } from '@element-plus/icons-vue'
+import { Plus } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { adminApi } from '@/api/admin'
-import type { Provider, SyncedModel } from '@/types'
+import type { Provider } from '@/types'
 
 const providers = ref<Provider[]>([])
 const loading = ref(false)
@@ -162,13 +131,6 @@ const rules: FormRules = {
   api_key: [{ required: true, message: '必填', trigger: 'blur' }],
 }
 
-// Sync Models
-const showSyncDialog = ref(false)
-const syncLoading = ref(false)
-const syncModelsList = ref<SyncedModel[]>([])
-const syncSelected = ref<SyncedModel[]>([])
-const importing = ref(false)
-const currentSyncProvider = ref<Provider | null>(null)
 
 async function fetchProviders() {
   loading.value = true
@@ -252,54 +214,6 @@ async function deleteProvider(prov: Provider) {
   await fetchProviders()
 }
 
-async function syncModels(prov: Provider) {
-  currentSyncProvider.value = prov
-  showSyncDialog.value = true
-  syncLoading.value = true
-  syncModelsList.value = []
-  syncSelected.value = []
-  try {
-    const res = await adminApi.syncProviderModels(prov.id)
-    syncModelsList.value = res.data
-  } catch (e: any) {
-    ElMessage.error('获取模型失败')
-    showSyncDialog.value = false
-  } finally {
-    syncLoading.value = false
-  }
-}
-
-function handleSyncSelection(val: SyncedModel[]) {
-  syncSelected.value = val
-}
-
-async function importSelectedModels() {
-  if (!currentSyncProvider.value) return
-  importing.value = true
-  let successCount = 0
-  for (const m of syncSelected.value) {
-    try {
-      await adminApi.createModel({
-        name: m.id,
-        display_name: m.id,
-        is_enabled: true,
-      })
-      // NOTE: We rely on the existing models logic, though technically we could set provider_id here.
-      // But we will update createModel to accept provider_id later if needed. For now, it's just imported as a general model.
-      // Actually, let's just create it. The user will need to assign provider_id via Models UI if we update it.
-      successCount++
-    } catch {
-      // ignore duplicates
-    }
-  }
-  importing.value = false
-  showSyncDialog.value = false
-  if (successCount > 0) {
-    ElMessage.success(`成功导入 ${successCount} 个新模型`)
-  } else {
-    ElMessage.info('没有导入新模型 (可能已存在)')
-  }
-}
 
 onMounted(fetchProviders)
 </script>

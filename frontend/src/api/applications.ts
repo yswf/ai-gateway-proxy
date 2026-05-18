@@ -11,6 +11,10 @@ export const applicationsApi = {
     return api.get<PaginatedResponse<AIModel>>(`/providers/${providerId}/models`)
   },
 
+  listAllModels() {
+    return api.get<PaginatedResponse<AIModel>>('/models')
+  },
+
   // Applications
   myApplications(params?: { skip?: number; limit?: number }) {
     return api.get<PaginatedResponse<KeyApplication>>('/applications', { params })

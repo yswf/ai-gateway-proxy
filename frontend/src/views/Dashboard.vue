@@ -47,7 +47,7 @@
       <h3 class="section-title">快速操作</h3>
       <div class="quick-grid">
         <router-link to="/keys" class="quick-card card">
-          <div class="quick-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6)">
+          <div class="quick-icon" style="background: linear-gradient(135deg, #9ab856, #7c9b3d)">
             <el-icon :size="22"><Key /></el-icon>
           </div>
           <div class="quick-body">
@@ -90,7 +90,7 @@ const models = ref<ModelUsage[]>([])
 const chartsLoading = ref(true)
 const trendDays = ref(30)
 
-const PALETTE = ['#6366f1', '#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899']
+const PALETTE = ['#9ab856', '#0d759f', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
 function fmt(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
@@ -99,7 +99,7 @@ function fmt(n: number) {
 }
 
 const statCards = computed(() => [
-  { label: '今日 Tokens', value: fmt(summary.value?.today_tokens ?? 0), sub: `累计 ${fmt(summary.value?.total_tokens_used ?? 0)}`, icon: Coin, gradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)' },
+  { label: '今日 Tokens', value: fmt(summary.value?.today_tokens ?? 0), sub: `累计 ${fmt(summary.value?.total_tokens_used ?? 0)}`, icon: Coin, gradient: 'linear-gradient(135deg,#9ab856,#7c9b3d)' },
   { label: '今日请求', value: fmt(summary.value?.today_requests ?? 0), sub: `累计 ${fmt(summary.value?.total_requests ?? 0)} 次`, icon: TrendCharts, gradient: 'linear-gradient(135deg,#10b981,#059669)' },
   { label: '活跃 Keys', value: `${summary.value?.active_keys ?? 0}`, sub: `共 ${summary.value?.total_keys ?? 0} 个`, icon: Key, gradient: 'linear-gradient(135deg,#f59e0b,#d97706)' },
   { label: '累计 Tokens', value: fmt(summary.value?.total_tokens_used ?? 0), sub: `${fmt(summary.value?.total_requests ?? 0)} 次请求`, icon: DataLine, gradient: 'linear-gradient(135deg,#3b82f6,#1d4ed8)' },
@@ -113,7 +113,7 @@ const trendOption = computed(() => ({
   xAxis: { type: 'category', data: daily.value.map(d => d.date.slice(5)), axisLabel: { color: '#94a3b8', fontSize: 11 }, axisLine: { lineStyle: { color: '#e2e8f0' } }, splitLine: { show: false } },
   yAxis: { type: 'value', axisLabel: { color: '#94a3b8', fontSize: 11, formatter: fmt }, splitLine: { lineStyle: { color: '#f1f5f9' } } },
   series: [
-    { name: '输入 Tokens', type: 'line', data: daily.value.map(d => d.prompt_tokens), smooth: true, lineStyle: { color: '#6366f1', width: 2 }, itemStyle: { color: '#6366f1' }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(99,102,241,0.15)' }, { offset: 1, color: 'rgba(99,102,241,0)' }] } } },
+    { name: '输入 Tokens', type: 'line', data: daily.value.map(d => d.prompt_tokens), smooth: true, lineStyle: { color: '#9ab856', width: 2 }, itemStyle: { color: '#9ab856' }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(154,184,86,0.15)' }, { offset: 1, color: 'rgba(154,184,86,0)' }] } } },
     { name: '输出 Tokens', type: 'line', data: daily.value.map(d => d.completion_tokens), smooth: true, lineStyle: { color: '#10b981', width: 2 }, itemStyle: { color: '#10b981' }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(16,185,129,0.12)' }, { offset: 1, color: 'rgba(16,185,129,0)' }] } } },
   ],
 }))

@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class KeyApplicationCreate(BaseModel):
@@ -15,6 +15,16 @@ class KeyApplicationReview(BaseModel):
     """Admin review action."""
     status: str  # "approved" or "rejected"
     admin_note: Optional[str] = None
+    rate_limit_rpm: int = 60
+    token_limit_daily: int = 0
+    expires_at: Optional[datetime] = None
+
+    @field_validator("expires_at")
+    @classmethod
+    def make_naive_utc(cls, v: Optional[datetime]) -> Optional[datetime]:
+        if v is not None and v.tzinfo is not None:
+            return v.astimezone(timezone.utc).replace(tzinfo=None)
+        return v
 
 
 class KeyApplicationResponse(BaseModel):

@@ -101,29 +101,6 @@ async def delete_provider(
     await redis.delete(f"provider:{provider_id}")
 
 
-@router.get("/providers/{provider_id}/sync-models", response_model=list[SyncedModel])
-async def sync_provider_models(
-    provider_id: uuid.UUID,
-    admin: Annotated[User, Depends(require_admin)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-):
-    """Fetch available models from the upstream provider API."""
-    res = await db.execute(select(Provider).where(Provider.id == provider_id))
-    provider = res.scalar_one_or_none()
-    if not provider:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Provider not found")
-    try:
-        models = await fetch_provider_models(provider.base_url, provider.api_key)
-        return [SyncedModel(**m) for m in models]
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Upstream returned {e.response.status_code}: {e.response.text[:200]}",
-        )
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Failed to reach provider: {str(e)}")
-
-
 # ── Applications ────────────────────────────────────────────────────────────────
 
 def _build_app_response(app: KeyApplication) -> KeyApplicationResponse:
@@ -183,7 +160,11 @@ async def review_application(
     if body.status not in ("approved", "rejected"):
         raise HTTPException(status_code=400, detail="status must be 'approved' or 'rejected'")
 
-    res = await db.execute(select(KeyApplication).where(KeyApplication.id == app_id))
+    res = await db.execute(
+        select(KeyApplication)
+        .options(joinedload(KeyApplication.provider), joinedload(KeyApplication.user))
+        .where(KeyApplication.id == app_id)
+    )
     app = res.scalar_one_or_none()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -202,8 +183,9 @@ async def review_application(
             user_id=app.user_id,
             data=APIKeyCreate(
                 name=f"Approved: {app.reason[:60]}",
-                rate_limit_rpm=60,
-                token_limit_daily=0,
+                rate_limit_rpm=body.rate_limit_rpm,
+                token_limit_daily=body.token_limit_daily,
+                expires_at=body.expires_at,
                 allowed_models=app.requested_models,
             ),
             provider_id=app.provider_id,

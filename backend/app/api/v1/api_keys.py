@@ -36,16 +36,6 @@ async def list_my_keys(
     keys = res.scalars().all()
     return APIKeyListResponse(total=total, items=keys)
 
-
-@router.post("", response_model=APIKeyCreatedResponse, status_code=status.HTTP_201_CREATED)
-async def create_key(
-    body: APIKeyCreate,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-):
-    return await create_api_key(db, current_user.id, body)
-
-
 @router.get("/{key_id}", response_model=APIKeyResponse)
 async def get_key(
     key_id: uuid.UUID,

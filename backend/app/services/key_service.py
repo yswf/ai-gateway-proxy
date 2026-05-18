@@ -44,6 +44,7 @@ async def create_api_key(
         key_hash=key_hash,
         key_prefix=key_prefix,
         name=data.name,
+        plaintext_key=raw_key,
         rate_limit_rpm=data.rate_limit_rpm,
         token_limit_daily=data.token_limit_daily,
         expires_at=data.expires_at,
@@ -53,9 +54,23 @@ async def create_api_key(
     await db.commit()
     await db.refresh(api_key)
 
-    response = APIKeyCreatedResponse.model_validate(api_key)
-    response.full_key = raw_key
-    return response
+    return APIKeyCreatedResponse(
+        id=api_key.id,
+        user_id=api_key.user_id,
+        provider_id=api_key.provider_id,
+        key_prefix=api_key.key_prefix,
+        name=api_key.name,
+        plaintext_key=api_key.plaintext_key,
+        status=api_key.status,
+        rate_limit_rpm=api_key.rate_limit_rpm,
+        token_limit_daily=api_key.token_limit_daily,
+        total_tokens_used=api_key.total_tokens_used,
+        allowed_models=api_key.allowed_models or [],
+        expires_at=api_key.expires_at,
+        created_at=api_key.created_at,
+        last_used_at=api_key.last_used_at,
+        full_key=raw_key,
+    )
 
 
 async def get_api_key_by_raw(db: AsyncSession, raw_key: str) -> APIKey | None:

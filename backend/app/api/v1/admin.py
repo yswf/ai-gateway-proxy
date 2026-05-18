@@ -154,7 +154,7 @@ async def admin_delete_key(
     key = res.scalar_one_or_none()
     if not key:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found")
-    key.status = "revoked"
+    await db.delete(key)
     await db.commit()
     await invalidate_key_cache(key.key_hash)
 

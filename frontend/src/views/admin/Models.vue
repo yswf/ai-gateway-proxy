@@ -100,7 +100,7 @@
               :model-value="row.is_enabled"
               :loading="togglingId === row.id"
               @change="(val: boolean) => toggleModel(row, val)"
-              active-color="#6366f1"
+              active-color="#9ab856"
             />
           </template>
         </el-table-column>
@@ -171,7 +171,7 @@
           <div class="form-hint">数值越小越靠前</div>
         </el-form-item>
         <el-form-item label="启用状态">
-          <el-switch v-model="form.is_enabled" active-color="#6366f1" />
+          <el-switch v-model="form.is_enabled" active-color="#9ab856" />
         </el-form-item>
       </el-form>
 

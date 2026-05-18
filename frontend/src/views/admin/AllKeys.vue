@@ -24,9 +24,33 @@
             <span class="key-name">{{ row.name }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="Key 前缀" width="160">
+        <el-table-column label="Key 值" width="220">
           <template #default="{ row }">
-            <code class="key-prefix-code">{{ row.key_prefix }}••••••</code>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <code class="key-prefix-code">
+                {{ showKeyMap[row.id] ? (row.plaintext_key || row.key_prefix + '••••••••') : (row.key_prefix + '••••••••') }}
+              </code>
+              <el-button
+                v-if="row.plaintext_key"
+                type="primary"
+                link
+                size="small"
+                style="padding:0; margin:0; min-height:0;"
+                @click="toggleKeyVisibility(row.id)"
+              >
+                <el-icon><View v-if="!showKeyMap[row.id]" /><Hide v-else /></el-icon>
+              </el-button>
+              <el-button
+                v-if="row.plaintext_key"
+                type="primary"
+                link
+                size="small"
+                style="padding:0; margin:0; min-height:0;"
+                @click="copyKeyText(row.plaintext_key)"
+              >
+                <el-icon><CopyDocument /></el-icon>
+              </el-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -62,6 +86,11 @@
             <span class="meta-text">{{ formatDate(row.created_at) }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="到期时间" width="150">
+          <template #default="{ row }">
+            <span class="meta-text">{{ row.expires_at ? formatDate(row.expires_at) : '永久有效' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="openEdit(row)">编辑</el-button>
@@ -73,7 +102,7 @@
             >
               {{ row.status === 'active' ? '暂停' : '激活' }}
             </el-button>
-            <el-button type="danger" size="small" @click="revokeKey(row)" v-if="row.status !== 'revoked'">撤销</el-button>
+            <el-button type="danger" size="small" @click="revokeKey(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -126,6 +155,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { View, Hide, CopyDocument } from '@element-plus/icons-vue'
 import { adminApi } from '@/api/admin'
 import type { APIKey } from '@/types'
 import dayjs from 'dayjs'
@@ -140,6 +170,21 @@ const showEditDialog = ref(false)
 const saving = ref(false)
 const selectedKey = ref<APIKey | null>(null)
 const editForm = reactive({ name: '', rate_limit_rpm: 60, token_limit_daily: 0, allowed_models: [] as string[] })
+
+const showKeyMap = ref<Record<string, boolean>>({})
+
+function toggleKeyVisibility(id: string) {
+  showKeyMap.value[id] = !showKeyMap.value[id]
+}
+
+async function copyKeyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success('已复制密钥到剪贴板')
+  } catch (e) {
+    ElMessage.error('复制失败')
+  }
+}
 
 function statusTag(s: string) { return { active: 'success', suspended: 'warning', revoked: 'danger' }[s] || 'info' }
 function statusLabel(s: string) { return { active: '活跃', suspended: '暂停', revoked: '已撤销' }[s] || s }
@@ -187,9 +232,9 @@ async function toggleKeyStatus(key: APIKey) {
 }
 
 async function revokeKey(key: APIKey) {
-  await ElMessageBox.confirm(`确定要撤销 "${key.name}" 吗？`, '确认撤销', { type: 'warning' })
+  await ElMessageBox.confirm(`确定要删除 "${key.name}" 吗？删除后无法恢复。`, '确认删除', { type: 'warning' })
   await adminApi.deleteKey(key.id)
-  ElMessage.success('Key 已撤销')
+  ElMessage.success('Key 已删除')
   fetchKeys()
 }
 

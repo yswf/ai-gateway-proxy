@@ -86,15 +86,18 @@ export const adminApi = {
   deleteProvider(id: string) {
     return api.delete(`/admin/providers/${id}`)
   },
-  syncProviderModels(id: string) {
-    return api.get<SyncedModel[]>(`/admin/providers/${id}/sync-models`)
-  },
 
   // Applications (admin)
   listApplications(params?: { skip?: number; limit?: number; status?: string }) {
     return api.get<PaginatedResponse<KeyApplication>>('/admin/applications', { params })
   },
-  reviewApplication(id: string, data: { status: 'approved' | 'rejected'; admin_note?: string }) {
+  reviewApplication(id: string, data: {
+    status: 'approved' | 'rejected'
+    admin_note?: string
+    rate_limit_rpm?: number
+    token_limit_daily?: number
+    expires_at?: string
+  }) {
     return api.post<KeyApplication>(`/admin/applications/${id}/review`, data)
   },
 }

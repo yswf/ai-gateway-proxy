@@ -22,6 +22,7 @@ class APIKey(Base):
     key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     key_prefix: Mapped[str] = mapped_column(String(20), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
+    plaintext_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False, index=True)
     
