@@ -106,6 +106,7 @@ export interface KeyUsageSummary {
 export interface UsageLogItem {
   id: number
   model: string
+  provider_name?: string
   endpoint: string
   prompt_tokens: number
   completion_tokens: number

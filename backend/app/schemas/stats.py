@@ -58,6 +58,7 @@ class AdminStatsSummary(BaseModel):
 class UsageLogItem(BaseModel):
     id: int
     model: str
+    provider_name: Optional[str] = "默认数据源"
     endpoint: str
     prompt_tokens: int
     completion_tokens: int

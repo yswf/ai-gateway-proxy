@@ -50,9 +50,12 @@
             <span class="meta-text">{{ formatDate(row.created_at) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="模型" width="180">
+        <el-table-column label="数据源 / 模型" min-width="160">
           <template #default="{ row }">
-            <el-tag size="small" type="info">{{ row.model }}</el-tag>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 13px; font-weight: 500; color: var(--color-text-primary);">{{ row.provider_name || '默认数据源' }}</span>
+              <span style="font-size: 11px; color: var(--color-text-secondary);">{{ row.model }}</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="端点" min-width="180">

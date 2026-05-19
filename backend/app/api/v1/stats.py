@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.models.usage_log import UsageLog
@@ -160,6 +161,7 @@ async def get_my_logs(
 
     res = await db.execute(
         select(UsageLog)
+        .options(selectinload(UsageLog.api_key).selectinload(APIKey.provider))
         .where(*conditions)
         .order_by(UsageLog.created_at.desc())
         .offset(skip)
@@ -173,6 +175,11 @@ async def get_my_logs(
             UsageLogItem(
                 id=log.id,
                 model=log.model,
+                provider_name=(
+                    log.api_key.provider.display_name
+                    if log.api_key and log.api_key.provider
+                    else "默认数据源"
+                ),
                 endpoint=log.endpoint,
                 prompt_tokens=log.prompt_tokens,
                 completion_tokens=log.completion_tokens,
