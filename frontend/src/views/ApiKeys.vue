@@ -25,24 +25,22 @@
           <template #default="{ row }">
             <div style="display:flex; align-items:center; gap:8px;">
               <code class="key-prefix-code">
-                {{ showKeyMap[row.id] ? (row.plaintext_key || row.key_prefix + '••••••••') : (row.key_prefix + '••••••••') }}
+                {{ showKeyMap[row.id] ? (row.plaintext_key ? row.plaintext_key.slice(0, 10) + '...' : row.key_prefix + '...') : (row.key_prefix + '••••') }}
               </code>
               <el-button
                 v-if="row.plaintext_key"
-                type="primary"
-                link
                 size="small"
-                style="padding:0; margin:0; min-height:0;"
+                circle
+                style="margin-left: 4px;"
                 @click="toggleKeyVisibility(row.id)"
               >
                 <el-icon><View v-if="!showKeyMap[row.id]" /><Hide v-else /></el-icon>
               </el-button>
               <el-button
                 v-if="row.plaintext_key"
-                type="primary"
-                link
                 size="small"
-                style="padding:0; margin:0; min-height:0;"
+                circle
+                style="margin-left: 4px;"
                 @click="copyKeyText(row.plaintext_key)"
               >
                 <el-icon><CopyDocument /></el-icon>
@@ -147,7 +145,21 @@ function toggleKeyVisibility(id: string) {
 
 async function copyKeyText(text: string) {
   try {
-    await navigator.clipboard.writeText(text)
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textArea = document.createElement("textarea")
+      textArea.value = text
+      textArea.style.position = "fixed"
+      textArea.style.left = "-999999px"
+      textArea.style.top = "-999999px"
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      const successful = document.execCommand('copy')
+      textArea.remove()
+      if (!successful) throw new Error('Fallback copy failed')
+    }
     ElMessage.success('已复制密钥到剪贴板')
   } catch (e) {
     ElMessage.error('复制失败，请手动选择复制')

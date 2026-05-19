@@ -92,25 +92,58 @@ async def proxy_openai(
     # Resolve provider settings (base_url + upstream api_key)
     base_url, upstream_key = await _get_provider_settings(api_key.provider_id, db)
 
+    # Path Safety Validation
+    if ".." in path or path.startswith("//"):
+        raise HTTPException(status_code=400, detail="Invalid path")
+
     body = await request.body()
     headers = dict(request.headers)
     method = request.method
 
     is_stream = False
-    try:
-        body_json = json.loads(body) if body else {}
-        is_stream = body_json.get("stream", False)
-        requested_model = body_json.get("model")
+    requested_models = set()
+    content_type = headers.get("content-type", "").lower()
 
-        # Enforce allowed models if list is not empty
-        if api_key.allowed_models and requested_model:
-            if requested_model not in api_key.allowed_models:
+    # 1. Extract from Body
+    if body:
+        if "application/json" in content_type:
+            try:
+                body_json = json.loads(body)
+                is_stream = body_json.get("stream", False)
+                if body_json.get("model"):
+                    requested_models.add(body_json["model"])
+            except json.JSONDecodeError:
+                pass
+        elif "multipart/form-data" in content_type:
+            try:
+                import re
+                match = re.search(rb'name="model"\r\n\r\n(.*?)\r\n', body)
+                if match:
+                    requested_models.add(match.group(1).decode('utf-8').strip())
+            except Exception:
+                pass
+
+    # 2. Extract from URL Path (Azure OpenAI & Standard API)
+    import re
+    deploy_match = re.search(r'deployments/([^/]+)', path)
+    if deploy_match:
+        requested_models.add(deploy_match.group(1))
+        
+    model_match = re.search(r'models/([^/]+)', path)
+    if model_match:
+        requested_models.add(model_match.group(1))
+
+    # 3. Enforce allowed models if list is not empty
+    if api_key.allowed_models and requested_models:
+        for rm in requested_models:
+            if rm not in api_key.allowed_models:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"API key is not authorized for model '{requested_model}'. Allowed: {api_key.allowed_models}"
+                    detail=f"API key is not authorized for model '{rm}'. Allowed: {api_key.allowed_models}"
                 )
-    except json.JSONDecodeError:
-        body_json = {}
+
+    # Use the first requested model for tracking usage, fallback to "unknown"
+    tracked_model = next(iter(requested_models)) if requested_models else "unknown"
 
     query_string = request.url.query
     full_path = f"v1/{path}"
@@ -134,7 +167,7 @@ async def proxy_openai(
         await record_usage(
             api_key_id=api_key.id,
             user_id=api_key.user_id,
-            model=body_json.get("model", "unknown"),
+            model=tracked_model,
             endpoint=f"v1/{path}",
             prompt_tokens=0,
             completion_tokens=0,

@@ -1,102 +1,87 @@
-import time
+import os
 import json
+import time
+import asyncio
+import re
 import logging
 from typing import AsyncGenerator
 import httpx
-import re
+from azure.identity.aio import ClientSecretCredential
 from app.core.config import settings
-from app.services.azure_auth import azure_token_manager
 
 logger = logging.getLogger("ProxyService")
 
 TIMEOUT = httpx.Timeout(connect=10.0, read=300.0, write=30.0, pool=10.0)
 
+# ================= 1. Environment Config =================
+CLIENT_ID = settings.AZURE_CLIENT_ID
+CLIENT_SECRET = settings.AZURE_CLIENT_SECRET
+TENANT_ID = settings.AZURE_TENANT_ID
+SCOPE = "https://cognitiveservices.azure.com/.default"
 
-def _build_headers(headers: dict, api_key: str, is_azure: bool = False, azure_sub_key: str = "") -> dict:
-    forward = {
-        k: v for k, v in headers.items()
-        if k.lower() not in {"host", "content-length", "transfer-encoding", "authorization", "connection"}
-    }
-    if is_azure:
-        forward["Authorization"] = f"Bearer {api_key}"
-        if azure_sub_key:
-            forward["Ocp-Apim-Subscription-Key"] = azure_sub_key
-    else:
-        forward["Authorization"] = f"Bearer {api_key}"
-    return forward
-
-async def _resolve_target_and_auth(path: str, body: bytes, base_url: str | None, upstream_api_key: str | None, headers: dict) -> tuple[str, dict]:
-    _base = (base_url or "https://api.openai.com").rstrip("/")
-    _key = upstream_api_key or ""
-    
-    is_azure = False
-    azure_config = None
-    
-    # Try parsing API key as Azure JSON
-    if _key.strip().startswith("{"):
-        try:
-            config = json.loads(_key)
-            if "tenant_id" in config:
-                is_azure = True
-                azure_config = config
-        except Exception:
-            pass
-            
-    if is_azure:
-        # Resolve Azure target URL
-        if "?" in path:
-            path_part, query_part = path.split("?", 1)
-        else:
-            path_part, query_part = path, ""
-            
-        clean_path = path_part.lstrip("/")
-        
-        # Strip v1/ if present
-        if clean_path.startswith("v1/"):
-            clean_path = clean_path[3:]
-            
-        api_version = azure_config.get("api_version", "2025-04-01-preview")
-        query_suffix = f"{query_part}&api-version={api_version}" if query_part else f"api-version={api_version}"
-        
-        if clean_path.startswith("openai/"):
-            target_url = f"{_base}/{clean_path}?{query_suffix}"
-        else:
-            model_name = "default"
-            content_type = headers.get("content-type", "")
-            
-            # Extract model name
-            if "application/json" in content_type and body:
-                try:
-                    data = json.loads(body)
-                    model_name = data.get("model", model_name)
-                except Exception:
-                    pass
-            elif "multipart/form-data" in content_type and body:
-                try:
-                    match = re.search(rb'name="model"\r\n\r\n(.*?)\r\n', body)
-                    if match:
-                        model_name = match.group(1).decode('utf-8').strip()
-                except Exception:
-                    pass
-            
-            if clean_path.startswith("models"):
-                target_url = f"{_base}/openai/{clean_path}?{query_suffix}"
-            else:
-                target_url = f"{_base}/openai/deployments/{model_name}/{clean_path}?{query_suffix}"
-                
-        # Fetch token
-        token = await azure_token_manager.get_token(
-            tenant_id=azure_config["tenant_id"],
-            client_id=azure_config["client_id"],
-            client_secret=azure_config["client_secret"]
+# ================= 2. Token Manager =================
+class TokenManager:
+    def __init__(self):
+        self.credential = ClientSecretCredential(
+            tenant_id=TENANT_ID,
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET
         )
-        forward_headers = _build_headers(headers, token, is_azure=True, azure_sub_key=azure_config.get("subscription_key", ""))
-        return target_url, forward_headers
-    else:
-        # Standard OpenAI routing
-        target_url = f"{_base}/{path.lstrip('/')}"
-        forward_headers = _build_headers(headers, _key)
-        return target_url, forward_headers
+        self.current_token = None
+        self.expires_on = 0
+        self._lock = asyncio.Lock()
+
+    async def get_token(self):
+        now = time.time()
+        if not self.current_token or now >= (self.expires_on - 30):
+            async with self._lock:
+                if not self.current_token or now >= (self.expires_on - 30):
+                    logger.info("[Auth] Token expired or missing. Fetching new Entra ID token...")
+                    try:
+                        token_info = await self.credential.get_token(SCOPE)
+                        self.current_token = token_info.token
+                        self.expires_on = token_info.expires_on
+                        # 将时间戳转换为可读格式打印
+                        expire_time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.expires_on))
+                        logger.info(f"[Auth] Token refreshed successfully. Expires at: {expire_time_str}")
+                    except Exception as e:
+                        logger.error(f"[Auth] Failed to fetch token: {str(e)}")
+                        raise e
+        return self.current_token
+
+    async def close(self):
+        await self.credential.close()
+
+token_manager = TokenManager()
+
+# ================= 3. Core Logic =================
+async def _resolve_target_and_auth(path: str, body: bytes, headers: dict, base_url: str | None = None, upstream_api_key: str | None = None) -> tuple[str, dict]:
+    """Resolve the target URL for Azure OpenAI and build the request headers."""
+    clean_path = path.lstrip("/")
+    
+    api_base = (base_url or "").rstrip("/")
+    sub_key = upstream_api_key or ""
+    
+    # Simple pass-through without path manipulation
+    target_url = f"{api_base}/{clean_path}"
+
+    # 2. Get Token and build headers
+    token = await token_manager.get_token()
+    
+    forward_headers = {
+        "Authorization": f"Bearer {token}",
+    }
+    
+    # Include Subscription key if configured
+    if sub_key:
+        forward_headers["Ocp-Apim-Subscription-Key"] = sub_key
+    
+    exclude_headers = {"host", "content-length", "authorization", "connection"}
+    for k, v in headers.items():
+        if k.lower() not in exclude_headers and k.lower() not in forward_headers:
+            forward_headers[k] = v
+
+    return target_url, forward_headers
 
 
 async def proxy_request(
@@ -108,7 +93,7 @@ async def proxy_request(
     upstream_api_key: str | None = None,
 ) -> tuple[httpx.Response, int]:
     """Forward a non-streaming request to the upstream API, return (response, latency_ms)."""
-    target_url, forward_headers = await _resolve_target_and_auth(path, body, base_url, upstream_api_key, headers)
+    target_url, forward_headers = await _resolve_target_and_auth(path, body, headers, base_url, upstream_api_key)
 
     logger.info(f"[Fwd ] Forwarding {method} to -> {target_url}")
 
@@ -121,7 +106,7 @@ async def proxy_request(
                 headers=forward_headers,
                 content=body,
             )
-        logger.info(f"[Resp] Upstream returned status: {response.status_code}")
+        logger.info(f"[Resp] Azure returned status: {response.status_code}")
     except Exception as e:
         logger.error(f"[Err ] Proxy network error: {str(e)}")
         raise e
@@ -139,7 +124,7 @@ async def proxy_stream(
     upstream_api_key: str | None = None,
 ) -> tuple[AsyncGenerator[bytes, None], float]:
     """Forward a streaming request, return (async_generator, start_time)."""
-    target_url, forward_headers = await _resolve_target_and_auth(path, body, base_url, upstream_api_key, headers)
+    target_url, forward_headers = await _resolve_target_and_auth(path, body, headers, base_url, upstream_api_key)
     start_time = time.time()
 
     logger.info(f"[Fwd ] Forwarding stream {method} to -> {target_url}")
@@ -153,7 +138,7 @@ async def proxy_stream(
                     headers=forward_headers,
                     content=body,
                 ) as response:
-                    logger.info(f"[Resp] Upstream stream returned status: {response.status_code}")
+                    logger.info(f"[Resp] Azure stream returned status: {response.status_code}")
                     async for chunk in response.aiter_bytes():
                         yield chunk
             except Exception as stream_err:

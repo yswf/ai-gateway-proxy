@@ -141,13 +141,49 @@ const curlCommand = computed(() => {
 })
 
 async function copyBaseUrl() {
-  await navigator.clipboard.writeText(baseUrl.value)
-  ElMessage.success('Base URL 已复制')
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(baseUrl.value)
+    } else {
+      const textArea = document.createElement("textarea")
+      textArea.value = baseUrl.value
+      textArea.style.position = "fixed"
+      textArea.style.left = "-999999px"
+      textArea.style.top = "-999999px"
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      const successful = document.execCommand('copy')
+      textArea.remove()
+      if (!successful) throw new Error('Fallback copy failed')
+    }
+    ElMessage.success('Base URL 已复制')
+  } catch (e) {
+    ElMessage.error('复制失败，请手动选择复制')
+  }
 }
 
 async function copyCurl() {
-  await navigator.clipboard.writeText(curlCommand.value)
-  ElMessage.success('cURL 命令已复制')
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(curlCommand.value)
+    } else {
+      const textArea = document.createElement("textarea")
+      textArea.value = curlCommand.value
+      textArea.style.position = "fixed"
+      textArea.style.left = "-999999px"
+      textArea.style.top = "-999999px"
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      const successful = document.execCommand('copy')
+      textArea.remove()
+      if (!successful) throw new Error('Fallback copy failed')
+    }
+    ElMessage.success('cURL 命令已复制')
+  } catch (e) {
+    ElMessage.error('复制失败，请手动选择复制')
+  }
 }
 
 async function sendRequest() {
