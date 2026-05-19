@@ -11,6 +11,7 @@ from app.models.user import User
 from app.models.api_key import APIKey
 from app.models.usage_log import UsageLog
 from app.models.model import Model
+from app.models.provider import Provider
 from app.schemas.user import UserResponse, UserUpdate, UserListResponse
 from app.schemas.api_key import APIKeyResponse, APIKeyUpdate, APIKeyListResponse
 from app.schemas.stats import (
@@ -240,15 +241,23 @@ async def admin_model_usage(
     res = await db.execute(
         select(
             UsageLog.model,
+            func.coalesce(Provider.display_name, '默认数据源').label("provider_name"),
             func.coalesce(func.sum(UsageLog.total_tokens), 0).label("total_tokens"),
             func.count(UsageLog.id).label("request_count"),
         )
+        .outerjoin(APIKey, UsageLog.api_key_id == APIKey.id)
+        .outerjoin(Provider, APIKey.provider_id == Provider.id)
         .where(UsageLog.created_at >= start_date)
-        .group_by(UsageLog.model)
+        .group_by(UsageLog.model, Provider.display_name)
         .order_by(func.sum(UsageLog.total_tokens).desc())
     )
     return [
-        ModelUsage(model=r.model, total_tokens=r.total_tokens, request_count=r.request_count)
+        ModelUsage(
+            model=r.model,
+            provider_name=r.provider_name,
+            total_tokens=r.total_tokens,
+            request_count=r.request_count
+        )
         for r in res.all()
     ]
 

@@ -182,7 +182,7 @@ async def review_application(
             db=db,
             user_id=app.user_id,
             data=APIKeyCreate(
-                name=f"Approved: {app.reason[:60]}",
+                name=f"{app.reason[:60]}",
                 rate_limit_rpm=body.rate_limit_rpm,
                 token_limit_daily=body.token_limit_daily,
                 expires_at=body.expires_at,

@@ -8,6 +8,7 @@ from sqlalchemy import select, func, and_
 from app.core.database import get_db
 from app.models.usage_log import UsageLog
 from app.models.api_key import APIKey
+from app.models.provider import Provider
 from app.schemas.stats import (
     DailyUsage,
     ModelUsage,
@@ -115,19 +116,27 @@ async def get_model_usage(
     res = await db.execute(
         select(
             UsageLog.model,
+            func.coalesce(Provider.display_name, '默认数据源').label("provider_name"),
             func.coalesce(func.sum(UsageLog.total_tokens), 0).label("total_tokens"),
             func.count(UsageLog.id).label("request_count"),
         )
+        .outerjoin(APIKey, UsageLog.api_key_id == APIKey.id)
+        .outerjoin(Provider, APIKey.provider_id == Provider.id)
         .where(
             UsageLog.user_id == current_user.id,
             UsageLog.created_at >= start_date,
         )
-        .group_by(UsageLog.model)
+        .group_by(UsageLog.model, Provider.display_name)
         .order_by(func.sum(UsageLog.total_tokens).desc())
     )
     rows = res.all()
     return [
-        ModelUsage(model=row.model, total_tokens=row.total_tokens, request_count=row.request_count)
+        ModelUsage(
+            model=row.model,
+            provider_name=row.provider_name,
+            total_tokens=row.total_tokens,
+            request_count=row.request_count
+        )
         for row in rows
     ]
 

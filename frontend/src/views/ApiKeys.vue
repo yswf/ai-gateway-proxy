@@ -215,6 +215,12 @@ onMounted(async () => {
   background: rgba(99, 102, 241, 0.1);
   padding: 3px 8px;
   border-radius: 6px;
+  display: inline-block;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 .meta-text { font-size: 13px; color: var(--color-text-secondary); }
 .form-hint { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; }

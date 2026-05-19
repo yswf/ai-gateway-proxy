@@ -258,6 +258,6 @@ onMounted(fetchKeys)
 .search-total { font-size: 13px; color: var(--color-text-secondary); }
 .table-footer { padding: 16px 20px; display: flex; justify-content: flex-end; border-top: 1px solid var(--color-border); }
 .key-name { font-weight: 500; color: var(--color-text-primary); }
-.key-prefix-code { font-family: monospace; font-size: 13px; color: var(--color-primary-light); background: rgba(99,102,241,0.1); padding: 3px 8px; border-radius: 6px; }
+.key-prefix-code { font-family: monospace; font-size: 13px; color: var(--color-primary-light); background: rgba(99,102,241,0.1); padding: 3px 8px; border-radius: 6px; display: inline-block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
 .meta-text { font-size: 13px; color: var(--color-text-secondary); }
 </style>

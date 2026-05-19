@@ -90,6 +90,7 @@ export interface DailyUsage {
 
 export interface ModelUsage {
   model: string
+  provider_name?: string
   total_tokens: number
   request_count: number
 }

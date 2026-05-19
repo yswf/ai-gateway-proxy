@@ -171,7 +171,11 @@ const pieOption = computed(() => ({
   legend: { orient: 'vertical', right: '5%', top: 'center', textStyle: { color: '#94a3b8', fontSize: 12 } },
   series: [{
     type: 'pie', radius: ['40%', '68%'], center: ['38%', '50%'],
-    data: models.value.map((m, i) => ({ name: m.model, value: m.total_tokens, itemStyle: { color: chartColors[i % chartColors.length] } })),
+    data: models.value.map((m, i) => ({
+      name: m.provider_name ? `${m.provider_name} | ${m.model}` : m.model,
+      value: m.total_tokens,
+      itemStyle: { color: chartColors[i % chartColors.length] }
+    })),
     label: { show: false },
   }],
 }))

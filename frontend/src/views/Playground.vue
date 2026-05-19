@@ -35,7 +35,7 @@
           </el-form-item>
 
           <el-form-item label="Base URL (Proxy Endpoint)">
-            <el-input v-model="baseUrl" readonly>
+            <el-input v-model="baseUrl" placeholder="请输入 Base URL">
               <template #append>
                 <el-button :icon="CopyDocument" @click="copyBaseUrl" />
               </template>
@@ -82,7 +82,7 @@
         <div class="glass-card mb-4 code-box">
           <div class="code-box-header">
             <span>cURL 示例</span>
-            <el-button link type="primary" size="small" @click="copyCurl">
+            <el-button size="small" @click="copyCurl">
               <el-icon><CopyDocument /></el-icon> 复制
             </el-button>
           </div>
@@ -104,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { CopyDocument } from '@element-plus/icons-vue'
 import { apiKeysApi } from '@/api/apiKeys'
@@ -117,8 +117,13 @@ const userKeys = ref<APIKey[]>([])
 const availableModels = ref<string[]>([])
 const fetchingModels = ref(false)
 
-const baseUrl = ref(window.location.origin + '/api/v1/proxy/chat/completions')
 const modelName = ref('gpt-3.5-turbo')
+const baseUrl = ref('')
+
+// Auto-fill when modelName changes (but allow manual editing)
+watch(modelName, (newVal) => {
+  baseUrl.value = `${window.location.origin}/v1/openai/deployments/${newVal}/chat/completions?api-version=2025-04-01-preview`
+})
 const prompt = ref('你好，请做一下自我介绍。')
 
 const loading = ref(false)
@@ -270,6 +275,7 @@ async function onKeyChange(keyId: string) {
 
 onMounted(() => {
   fetchKeys()
+  baseUrl.value = `${window.location.origin}/v1/openai/deployments/${modelName.value}/chat/completions?api-version=2025-04-01-preview`
 })
 </script>
 
@@ -326,7 +332,7 @@ onMounted(() => {
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 13px;
   line-height: 1.5;
-  color: var(--color-primary-light);
+  color: var(--color-text-primary);
   background: rgba(99, 102, 241, 0.03);
   overflow-x: auto;
   flex: 1;

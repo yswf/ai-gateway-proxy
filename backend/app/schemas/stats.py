@@ -13,6 +13,7 @@ class DailyUsage(BaseModel):
 
 class ModelUsage(BaseModel):
     model: str
+    provider_name: Optional[str] = "默认数据源"
     total_tokens: int
     request_count: int
 
