@@ -101,49 +101,63 @@ async def proxy_openai(
     method = request.method
 
     is_stream = False
-    requested_models = set()
     content_type = headers.get("content-type", "").lower()
 
-    # 1. Extract from Body
-    if body:
+    # 1. Extract stream flag from body if JSON
+    if body and "application/json" in content_type:
+        try:
+            body_json = json.loads(body)
+            is_stream = body_json.get("stream", False)
+        except json.JSONDecodeError:
+            pass
+
+    # 2. Resolve the effective model name based on priority: URL path > Request body
+    resolved_model = None
+
+    # Try extracting from URL path first (Azure deployments or models)
+    import re
+    deploy_match = re.search(r'deployments/([^/]+)', path)
+    if deploy_match:
+        resolved_model = deploy_match.group(1)
+    else:
+        model_match = re.search(r'models/([^/]+)', path)
+        if model_match:
+            resolved_model = model_match.group(1)
+
+    # If not found in URL path, try extracting from request body
+    if not resolved_model and body:
         if "application/json" in content_type:
             try:
                 body_json = json.loads(body)
-                is_stream = body_json.get("stream", False)
                 if body_json.get("model"):
-                    requested_models.add(body_json["model"])
+                    resolved_model = body_json["model"]
             except json.JSONDecodeError:
                 pass
         elif "multipart/form-data" in content_type:
             try:
-                import re
                 match = re.search(rb'name="model"\r\n\r\n(.*?)\r\n', body)
                 if match:
-                    requested_models.add(match.group(1).decode('utf-8').strip())
+                    resolved_model = match.group(1).decode('utf-8').strip()
             except Exception:
                 pass
 
-    # 2. Extract from URL Path (Azure OpenAI & Standard API)
-    import re
-    deploy_match = re.search(r'deployments/([^/]+)', path)
-    if deploy_match:
-        requested_models.add(deploy_match.group(1))
-        
-    model_match = re.search(r'models/([^/]+)', path)
-    if model_match:
-        requested_models.add(model_match.group(1))
+    # If both URL and Body are missing model name, raise 400 Bad Request
+    if not resolved_model:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Model name is missing in both URL path and request body."
+        )
 
-    # 3. Enforce allowed models if list is not empty
-    if api_key.allowed_models and requested_models:
-        for rm in requested_models:
-            if rm not in api_key.allowed_models:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"API key is not authorized for model '{rm}'. Allowed: {api_key.allowed_models}"
-                )
+    # 3. Enforce allowed models validation on the resolved model
+    if api_key.allowed_models:
+        if resolved_model not in api_key.allowed_models:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"API key is not authorized for model '{resolved_model}'. Allowed: {api_key.allowed_models}"
+            )
 
-    # Use the first requested model for tracking usage, fallback to "unknown"
-    tracked_model = next(iter(requested_models)) if requested_models else "unknown"
+    # Use the resolved model for tracking usage/statistics
+    tracked_model = resolved_model
 
     query_string = request.url.query
     full_path = f"v1/{path}"

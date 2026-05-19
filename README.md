@@ -129,3 +129,59 @@ docker compose -f docker-compose.dev.yml up -d --build
 docker compose -f docker-compose.dev.yml down
 ```
 *(如果需要彻底清理包括数据库在内的所有数据，请加上 `-v` 参数)*
+
+## 🗄️ 数据库管理与迁移指南 (Database Migration Guide)
+
+本项目使用 **Alembic** 配合 SQLAlchemy 进行数据库的版本迭代与迁移管理。这允许开发人员无需手动操作 SQL 即可安全地同步数据库表结构。
+
+### 1. 迁移设计与最佳实践
+所有的数据库定义均存放在 `backend/app/models/` 目录下。
+> [!IMPORTANT]
+> **请勿在数据库中直接执行 `CREATE TABLE` 或 `ALTER TABLE`！** 
+> 任何数据库表结构的改动（新增表、删除表、修改字段名/类型等），均**必须**通过 Alembic 迁移脚本来完成。
+
+---
+
+### 2. 数据库变更操作步骤 (开发流)
+
+当您在 `backend/app/models/` 中新增、修改或删除了 SQLAlchemy 模型后，请按照以下三个步骤生成并运行迁移：
+
+#### 第一步：自动生成迁移脚本 (Autogenerate)
+在开发容器后台，让 Alembic 自动对比最新的 Python 模型与当前数据库状态，自动生成带版本号的迁移脚本：
+```bash
+docker compose -f docker-compose.dev.yml exec backend alembic revision --autogenerate -m "描述您的变更_例如_add_provider_name_to_logs"
+```
+* 执行完毕后，会在 `backend/alembic/versions/` 下生成一个 `.py` 脚本（例如 `1a2b3c4d5e6f_add_provider_name_to_logs.py`）。
+* **强烈建议**：打开这个新生成的版本文件，人工检查 `upgrade()` 和 `downgrade()` 内的数据库变更是否完全符合您的预期。
+
+#### 第二步：应用迁移到开发数据库 (Upgrade)
+将自动生成的最新脚本应用到您的开发 PostgreSQL 中：
+```bash
+docker compose -f docker-compose.dev.yml exec backend alembic upgrade head
+```
+
+#### 第三步：提交迁移脚本
+* 确认迁移在本地运行成功后，将生成的 `backend/alembic/versions/*.py` 脚本文件一同 `git add` 并 `git commit` 提交到代码仓库中。
+* 这样，其他开发人员或生产环境通过拉取最新代码，只需运行 `alembic upgrade head` 即可同步升级他们的数据库，保证全平台表结构绝对一致。
+
+---
+
+### 3. 其他常用迁移管理命令
+
+* **查看当前数据库版本状态**：
+  ```bash
+  docker compose -f docker-compose.dev.yml exec backend alembic current
+  ```
+* **查看完整迁移历史记录**：
+  ```bash
+  docker compose -f docker-compose.dev.yml exec backend alembic history --verbose
+  ```
+* **版本回滚（降级到上一版本）**：
+  ```bash
+  docker compose -f docker-compose.dev.yml exec backend alembic downgrade -1
+  ```
+* **直接将数据库标记为最新（常用于导入存量旧数据后的初始化）**：
+  ```bash
+  docker compose -f docker-compose.dev.yml exec backend alembic stamp head
+  ```
+

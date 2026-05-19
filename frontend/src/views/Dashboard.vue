@@ -124,7 +124,11 @@ const modelOption = computed(() => ({
   legend: { orient: 'vertical', right: '2%', top: 'center', textStyle: { color: '#475569', fontSize: 12 } },
   series: [{
     type: 'pie', radius: ['42%', '68%'], center: ['36%', '50%'],
-    data: models.value.map((m, i) => ({ name: m.model, value: m.total_tokens, itemStyle: { color: PALETTE[i % PALETTE.length] } })),
+    data: models.value.map((m, i) => ({
+      name: m.provider_name ? `${m.provider_name} | ${m.model}` : m.model,
+      value: m.total_tokens,
+      itemStyle: { color: PALETTE[i % PALETTE.length] }
+    })),
     label: { show: false },
     emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } },
   }],
